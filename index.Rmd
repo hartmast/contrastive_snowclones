@@ -1,0 +1,180 @@
+---
+title: "X is the new Y - contrastive"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float: true
+    collapsed: false
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Preliminaries
+
+session info:
+
+```{r sessionInfo, message = FALSE, warning = FALSE}
+
+sessionInfo()
+
+```
+
+Install and load packages
+
+```{r pkg, message = FALSE, warning = FALSE}
+
+# install CRAN packages (if not yet installed)
+sapply(c("readxl", "tidyverse", "patchwork", "devtools", "vroom", "DT"), function(x) if(!is.element(x, installed.packages())) install.packages(x, dependencies = T))
+
+# install non-CRAN packages (if not yet installed)
+if(!is.element("concordances", installed.packages())) {
+devtools::install_github("hartmast/concordances")
+}
+
+# if this doesn't work, check sfla.ch for the package
+if(!is.element("collostructions", installed.packages())) {
+  install.packages("https://sfla.ch/wp-content/uploads/2021/02/collostructions_0.2.0.tar.gz", repos = NULL)
+}
+
+# load packages
+library(readxl)
+library(tidyverse)
+library(patchwork)
+library(vroom)
+library(collostructions)
+library(DT)
+
+```
+
+## Data wrangling
+
+```{r}
+
+# English
+en <- read_xlsx("ENCOW_x_is_the_new_y_without_false_hits.xlsx")
+
+# Spanish
+es <- read_xlsx("ESCOW_x_nuev_y_without_false_hits.xlsx")
+
+```
+
+omit uncertain hits
+
+```{r}
+en <- filter(en, keep=="y")
+es <- filter(es, keep=="y")
+```
+
+## Collostructional analysis
+
+For the collostructional analysis, we read in the lemma lists for the English, German, and Spanish data.
+
+```{r, message=FALSE, eval=FALSE}
+
+decow <- vroom("/Users/stefanhartmann/Downloads/decow16bx.lp.tsv.gz", col_names = c("Lemma", "POS", "Freq"))
+escow <- vroom("/Users/stefanhartmann/sciebo/Projekte/snowclones/ESCOW frequency lists/escow14ax.freq0.l.zip")
+encow <- vroom("/Users/stefanhartmann/sciebo/Tutorials/collostructions_tutorial/data/encow16ax.lp.tsv.gz", col_names = c("Lemma", "POS", "Freq"))
+
+```
+
+Find the lemmas that actually occur in the datasets
+
+```{r, eval=FALSE}
+
+# lemma list ES
+es_lemmas <- unique(c(es$Lemma_x, es$Lemma_y))
+
+# which ESCOW lemmas in es_lemmas?
+find_lemmas <- which(escow$token... %in% es_lemmas)
+escow <- escow[find_lemmas,]
+write_csv(escow, "es_cow_lemmas.csv")
+
+```
+
+Read filtered frequency lists
+
+```{r}
+
+# ESCOW lemma frequencies
+escow <- read_csv("es_cow_lemmas.csv")
+
+# ESCOW pos frequencies
+es_pos <- read_csv("frequency_lists/ESCOW_pos_frequencies.csv")
+
+# get total number of nouns and adjectives
+n_a_freq <- filter(es_pos, pos %in% c("NOUN", "ADP", "PROPN", "ADJ")) %>% select(frequency) %>% sum
+
+# collostructional analysis ----
+
+# lowercase lemmas
+es$lemma_x <- tolower(es$Lemma_x)
+es$lemma_y <- tolower(es$Lemma_y)
+
+# create input for coll. anal. for
+# x slot
+input_x <- table(es$lemma_x) %>% as_tibble(.name_repair="unique") %>% setNames(c("Lemma", "Freq_in_cxn"))
+
+# lowercase lemma in escow
+escow$lemma <- tolower(escow$token...)
+
+input_x <- left_join(input_x, select(escow, lemma, f_raw),
+          by = c("Lemma" = "lemma"))
+
+# replace NA by 0
+input_x <- input_x %>% replace_na(list(Freq_in_cxn = 0, f_raw = 0))
+
+# omit all with f_raw < Freq_in_cxn
+input_x <- input_x[which(input_x$f_raw>=input_x$Freq_in_cxn),]
+
+# coll. anal.
+collex_x <- collex(as.data.frame(input_x), corpsize = n_a_freq)
+
+
+# same for y slot -----
+
+# create input for coll. anal. for
+# x slot
+input_y <- table(es$lemma_y) %>% as_tibble(.name_repair="unique") %>% setNames(c("Lemma", "Freq_in_cxn"))
+
+
+input_y <- left_join(input_y, select(escow, lemma, f_raw),
+          by = c("Lemma" = "lemma"))
+
+# replace NA by 0
+input_y <- input_y %>% replace_na(list(Freq_in_cxn = 0, f_raw = 0))
+
+# omit all with f_raw < Freq_in_cxn
+input_y <- input_y[which(input_y$f_raw>=input_y$Freq_in_cxn),]
+
+# coll. anal.
+collex_y <- collex(as.data.frame(input_y), corpsize = n_a_freq)
+
+
+```
+
+Results for x slot
+
+```{r}
+collex_x %>% DT::datatable()
+```
+
+Results for y slot
+
+```{r}
+collex_y %>% DT::datatable()
+```
+
+
+## Dinstinctive collexeme analysis
+
+```{r}
+
+es %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
+
+```
