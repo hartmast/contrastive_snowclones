@@ -77,6 +77,79 @@ de <- filter(de, keep=="y")
 
 ```
 
+## Frequency and productivity measures
+
+Get types, tokens, and hapax legomena for the three languages.
+
+```{r}
+
+# add lowercase lemmas
+es$lemma_x <- tolower(es$Lemma_x)
+es$lemma_y <- tolower(es$Lemma_y)
+
+de$lemma_x <- tolower(de$Lemma_x)
+de$lemma_y <- tolower(de$Lemma_y)
+
+en$lemma_x <- tolower(en$Lemma_x)
+en$lemma_y <- tolower(en$Lemma_y)
+
+# add x-y combinations
+
+es$lemma_x_y <- paste0(es$lemma_x, "-", es$lemma_y)
+en$lemma_x_y <- paste0(en$lemma_x, "-", en$lemma_y)
+de$lemma_x_y <- paste0(de$lemma_x, "-", de$lemma_y)
+
+# get hapaxes --> add frequency counts
+en <- en %>% group_by(lemma_x) %>% 
+  add_count(name = "count_x") %>%
+  ungroup %>% group_by(lemma_y) %>%
+  add_count(name = "count_y") %>%
+  ungroup %>% group_by(lemma_x_y) %>%
+  add_count(name = "count_x_y")
+
+es <- es %>% group_by(lemma_x) %>% 
+  add_count(name = "count_x") %>%
+  ungroup %>% group_by(lemma_y) %>%
+  add_count(name = "count_y") %>%
+  ungroup %>% group_by(lemma_x_y) %>%
+  add_count(name = "count_x_y")
+
+de <- de %>% group_by(lemma_x) %>% 
+  add_count(name = "count_x") %>%
+  ungroup %>% group_by(lemma_y) %>%
+  add_count(name = "count_y") %>%
+  ungroup %>% group_by(lemma_x_y) %>%
+  add_count(name = "count_x_y")
+
+# table
+tibble(languages = c("English", "German", "Spanish"),
+       tokens = c(nrow(en), nrow(de), nrow(es)),
+       types_x = c(length(unique(en$lemma_x)),
+                   length(unique(de$lemma_x)),
+                   length(unique(es$lemma_x))),
+       types_y = c(length(unique(en$lemma_y)),
+                   length(unique(de$lemma_y)),
+                   length(unique(es$lemma_y))),
+       types_x_y = c(length(unique(en$lemma_x_y)),
+                   length(unique(de$lemma_x_y)),
+                   length(unique(es$lemma_x_y))),
+       hapaxes_x = c(length(which(en$count_x==1)),
+                     length(which(de$count_x==1)),
+                     length(which(es$count_x==1))),
+       hapaxes_y = c(length(which(en$count_y==1)),
+                     length(which(de$count_y==1)),
+                     length(which(es$count_y==1))),
+       hapaxes_x_y = c(length(which(en$count_x_y==1)),
+                     length(which(de$count_x_y==1)),
+                     length(which(es$count_x_y==1)))
+       
+       ) 
+
+
+
+```
+
+
 ## Collostructional analysis
 
 For the collostructional analysis, we read in the lemma lists for the English, German, and Spanish data.
@@ -135,14 +208,8 @@ n_a_freq_de <- filter(de_pos, tag %in% c("NN", "ADJA", "ADJD", "NE", "NN"))
 
 # collostructional analysis ----
 
-# lowercase lemmas
-es$lemma_x <- tolower(es$Lemma_x)
-es$lemma_y <- tolower(es$Lemma_y)
 
-de$lemma_x <- tolower(de$Lemma_x)
-de$lemma_y <- tolower(de$Lemma_y)
-
-# also, for the collostructional analysis,
+# for the collostructional analysis,
 # reduce two-word lemmas to the last word
 # (compound heads for compounds, last names
 # for person names)
@@ -279,8 +346,8 @@ collex_y_de %>% DT::datatable()
 
 ```{r}
 
-es %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
+es %>% ungroup %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
 
-de %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
+de %>% ungroup %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
 
 ```
