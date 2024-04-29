@@ -125,8 +125,13 @@ decow <- read_csv("de_cow_lemmas.csv")
 # ESCOW pos frequencies
 es_pos <- read_csv("frequency_lists/ESCOW_pos_frequencies.csv")
 
+# DECOW pos frequencies
+de_pos <- read_csv("frequency_lists/decow_pos_frequencies.csv")
+
 # get total number of nouns and adjectives
 n_a_freq <- filter(es_pos, pos %in% c("NOUN", "ADP", "PROPN", "ADJ")) %>% select(frequency) %>% sum
+
+n_a_freq_de <- filter(de_pos, tag %in% c("NN", "ADJA", "ADJD", "NE", "NN"))
 
 # collostructional analysis ----
 
@@ -134,21 +139,75 @@ n_a_freq <- filter(es_pos, pos %in% c("NOUN", "ADP", "PROPN", "ADJ")) %>% select
 es$lemma_x <- tolower(es$Lemma_x)
 es$lemma_y <- tolower(es$Lemma_y)
 
+de$lemma_x <- tolower(de$Lemma_x)
+de$lemma_y <- tolower(de$Lemma_y)
+
+# also, for the collostructional analysis,
+# reduce two-word lemmas to the last word
+# (compound heads for compounds, last names
+# for person names)
+de$lemma_x <- gsub(".* ", "", de$lemma_x)
+de$lemma_y <- gsub(".* ", "", de$lemma_y)
+
+
 # create input for coll. anal. for
 # x slot
 input_x <- table(es$lemma_x) %>% as_tibble(.name_repair="unique") %>% setNames(c("Lemma", "Freq_in_cxn"))
 
+input_x_de <- table(de$lemma_x) %>% as_tibble(.name_repair="unique") %>% setNames(c("Lemma", "Freq_in_cxn"))
+
 # lowercase lemma in escow
 escow$lemma <- tolower(escow$token...)
 
+# lowercase lemma in decow
+decow$lemma <- tolower(decow$Lemma)
+
+decow <- decow %>% group_by(lemma) %>% summarise(
+  Freq = sum(Freq)
+)
+
+# join dataframes to combine lemma and corpus freqs
 input_x <- left_join(input_x, select(escow, lemma, f_raw),
+          by = c("Lemma" = "lemma"))
+
+
+input_x_de <- left_join(input_x_de, select(decow, lemma, Freq),
           by = c("Lemma" = "lemma"))
 
 # replace NA by 0
 input_x <- input_x %>% replace_na(list(Freq_in_cxn = 0, f_raw = 0))
 
+input_x_de <- input_x_de %>% replace_na(list(Freq_in_cxn = 0, Freq = 0))
+
 # omit all with f_raw < Freq_in_cxn
 input_x <- input_x[which(input_x$f_raw>=input_x$Freq_in_cxn),]
+
+input_x_de <- input_x_de[which(input_x_de$Freq >= input_x_de$Freq_in_cxn),]
+
+# same for y -----
+
+# generate input for coll. anal.
+input_y_de <- table(de$lemma_y) %>% as_tibble(.name_repair="unique") %>% setNames(c("Lemma", "Freq_in_cxn"))
+
+# join dataframes to combine lemma and corpus freqs
+input_y <- left_join(input_y_de, select(escow, lemma, f_raw),
+          by = c("Lemma" = "lemma"))
+
+
+input_y_de <- left_join(input_y_de, select(decow, lemma, Freq),
+          by = c("Lemma" = "lemma"))
+
+# replace NA by 0
+input_y_de <- input_y_de %>% replace_na(list(Freq_in_cxn = 0, Freq = 0))
+
+input_y_de <- input_y_de[which(input_y_de$Freq >= input_y_de$Freq_in_cxn),]
+
+
+```
+
+## Simple collexeme analysis - Spanish
+
+```{r}
 
 # coll. anal.
 collex_x <- collex(as.data.frame(input_x), corpsize = n_a_freq)
@@ -188,11 +247,40 @@ Results for y slot
 collex_y %>% DT::datatable()
 ```
 
+## Simple collexeme analysis - German
+
+```{r}
+
+collex_x_de <- input_x_de %>% as.data.frame %>% collex(corpsize = sum(n_a_freq_de$frequency))
+
+collex_y_de <- input_y_de %>% as.data.frame %>% collex(corpsize = sum(n_a_freq_de$frequency))
+
+
+```
+
+Results x slot
+
+```{r}
+
+collex_x_de %>% DT::datatable()
+
+```
+
+Results y slot
+
+```{r}
+
+collex_y_de %>% DT::datatable()
+
+```
+
 
 ## Dinstinctive collexeme analysis
 
 ```{r}
 
 es %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
+
+de %>% select(lemma_x, lemma_y) %>% as.data.frame() %>% collex.covar() %>% DT::datatable()
 
 ```
