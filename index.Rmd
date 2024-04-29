@@ -62,6 +62,10 @@ en <- read_xlsx("ENCOW_x_is_the_new_y_without_false_hits.xlsx")
 # Spanish
 es <- read_xlsx("ESCOW_x_nuev_y_without_false_hits.xlsx")
 
+# German
+de <- read_xlsx("DECOW_x_ist_das_neue_y_without_false_hits.xlsx")
+
+
 ```
 
 omit uncertain hits
@@ -69,6 +73,8 @@ omit uncertain hits
 ```{r}
 en <- filter(en, keep=="y")
 es <- filter(es, keep=="y")
+de <- filter(de, keep=="y")
+
 ```
 
 ## Collostructional analysis
@@ -90,10 +96,19 @@ Find the lemmas that actually occur in the datasets
 # lemma list ES
 es_lemmas <- unique(c(es$Lemma_x, es$Lemma_y))
 
+# lemma list DE
+de_lemmas <- unique(c(de$Lemma_x, de$Lemma_y))
+
 # which ESCOW lemmas in es_lemmas?
 find_lemmas <- which(escow$token... %in% es_lemmas)
 escow <- escow[find_lemmas,]
 write_csv(escow, "es_cow_lemmas.csv")
+
+# which DECOW lemmas in de_lemmas?
+find_lemmas_de <- which(decow$Lemma %in% de_lemmas)
+decow <- decow[find_lemmas_de,]
+write_csv(decow, "de_cow_lemmas.csv")
+
 
 ```
 
@@ -103,6 +118,9 @@ Read filtered frequency lists
 
 # ESCOW lemma frequencies
 escow <- read_csv("es_cow_lemmas.csv")
+
+# DECOW lemma frequencies
+decow <- read_csv("de_cow_lemmas.csv")
 
 # ESCOW pos frequencies
 es_pos <- read_csv("frequency_lists/ESCOW_pos_frequencies.csv")
