@@ -156,9 +156,9 @@ For the collostructional analysis, we read in the lemma lists for the English, G
 
 ```{r, message=FALSE, eval=FALSE}
 
-decow <- vroom("/Users/stefanhartmann/Downloads/decow16bx.lp.tsv.gz", col_names = c("Lemma", "POS", "Freq"))
-escow <- vroom("/Users/stefanhartmann/sciebo/Projekte/snowclones/ESCOW frequency lists/escow14ax.freq0.l.zip")
-encow <- vroom("/Users/stefanhartmann/sciebo/Tutorials/collostructions_tutorial/data/encow16ax.lp.tsv.gz", col_names = c("Lemma", "POS", "Freq"))
+decow <- vroom("decow16bx.lp.tsv.gz", col_names = c("Lemma", "POS", "Freq"))
+escow <- vroom("escow14ax.freq0.l.zip")
+encow <- vroom("encow16ax.lp.tsv.gz", col_names = c("Lemma", "POS", "Freq"))
 
 ```
 
