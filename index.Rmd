@@ -362,7 +362,6 @@ For a cross-linguistic distinctive collexeme analysis, we use automatic translat
 
 # create input for ChatGPT
 
-# Prompt: "Please translate the following German words to English and return them as a comma-separated list."
 
 # Prompt: "Please translate the following German terms to English. Each row is one term. Please return a table in which the first column contains the original German word and the second column contains the English translation."
 
